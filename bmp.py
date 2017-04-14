@@ -1,7 +1,18 @@
 import math
+import os
+import ntpath
+import time
+
 
 def get_all_metadata(filename):
-    result = get_bitmap_file_header_dict(filename)
+    result = {
+        "path" : os.path.dirname(os.path.realpath(filename)),
+        "filename" : ntpath.basename(filename),
+        "created" : time.ctime(os.path.getctime(filename)),
+        "modified": time.ctime(os.path.getmtime(filename))
+
+    }
+    result.update(get_bitmap_file_header_dict(filename))
     result.update(get_bitmap_info_dict(filename))
     return result
 
@@ -30,11 +41,15 @@ def get_bitmap_info_dict(filename):
         binary_file.seek(0)
         result_dict = { "bitmap info size": bitmap_info_size }
         if bitmap_info_size == 40:
+            result_dict.update({"BMP version": "Windows V3"})
             result_dict.update(get_bitmap_V3_header_dict(binary_file.read(bitmap_info_size+14)))
         elif bitmap_info_size == 108:
+            result_dict.update({"BMP version": "Windows V4"})
             result_dict.update(get_bitmap_V4_header_dict(binary_file.read(bitmap_info_size + 14)))
         elif bitmap_info_size == 124:
+            result_dict.update({"BMP version": "Windows V5"})
             result_dict.update(get_bitmap_V4_header_dict(binary_file.read(bitmap_info_size + 14)))
+
         return result_dict
 
 def get_bitmap_V3_header_dict(bitmap_info):
@@ -43,7 +58,7 @@ def get_bitmap_V3_header_dict(bitmap_info):
         "height" : int.from_bytes(bitmap_info[22:26], byteorder="little"),
         "number of panels" : int.from_bytes(bitmap_info[26:28], byteorder="little"),
         "color depth": int.from_bytes(bitmap_info[28:30], byteorder="little"),
-        "compression method": int.from_bytes(bitmap_info[30:34], byteorder="little"),
+        "compression method": int.from_bytes(bitmap_info[30:34], byteorder="little") or "None",
         "image size": convert_size(int.from_bytes(bitmap_info[34:38], byteorder="little")),
         "horizontal resolution": int.from_bytes(bitmap_info[38:42], byteorder="little", signed=True),
         "vertical resolution": int.from_bytes(bitmap_info[42:46], byteorder="little", signed=True),
@@ -87,7 +102,7 @@ def convert_size(size_bytes):
     return '%s %s' % (s, size_name[i])
 
 if __name__ == '__main__':
-    filename = "test images/when-my-code-works-300x200.bmp"
+    filename = "test-images/when-my-code-works-300x200.bmp"
     header_info = get_bitmap_file_header_dict(filename)
     print(header_info)
     print(get_bitmap_info_dict(filename))

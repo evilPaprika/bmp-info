@@ -14,14 +14,14 @@ class Window(Frame):
         self.pack(fill=BOTH, expand=1)
         self.showImg()
         i = 0
-        for key, val in get_all_metadata('lena_gray.bmp').items():
+        for key, val in get_all_metadata('test-images\debugging.bmp').items():
             text = Label(self, text=(key + ":  " + str(val)))
             text.place(x=self.img_width + 5, y=i)
             i += 20
 
 
     def showImg(self):
-        load = Image.open("lena_gray.bmp")
+        load = Image.open("test-images\debugging.bmp")
         render = ImageTk.PhotoImage(load)
         img = Label(self, image=render)
         img.image = render
