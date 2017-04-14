@@ -1,5 +1,10 @@
 import math
 
+def get_all_metadata(filename):
+    result = get_bitmap_file_header_dict(filename)
+    result.update(get_bitmap_info_dict(filename))
+    return result
+
 def get_bitmap_file_header_dict(filename):
     """
     Обрабатывает хедер файла, и возвращает словарь данных
@@ -10,7 +15,7 @@ def get_bitmap_file_header_dict(filename):
             raise ValueError("file is not bitmap image file")
         return {
                 "header field" : bitmap[:2].decode("ascii"),
-                "file size bytes" : int.from_bytes(bitmap[2:6], byteorder="little"),
+                "file size" : convert_size(int.from_bytes(bitmap[2:6], byteorder="little")),
                 "offset": int.from_bytes(bitmap[10:12], byteorder="little"),
                }
 
@@ -23,12 +28,13 @@ def get_bitmap_info_dict(filename):
         binary_file.seek(14)
         bitmap_info_size = int.from_bytes(binary_file.read(2), byteorder="little")
         binary_file.seek(0)
-        result_dict = {
-            40: get_bitmap_V3_header_dict(binary_file.read(bitmap_info_size+14)),
-            108: get_bitmap_V4_header_dict(binary_file.read(bitmap_info_size+14)),
-            124: get_bitmap_V5_header_dict(binary_file.read(bitmap_info_size+14))
-        }.get(bitmap_info_size, dict())
-        result_dict.update({"bitmap-info-size": bitmap_info_size})
+        result_dict = { "bitmap info size": bitmap_info_size }
+        if bitmap_info_size == 40:
+            result_dict.update(get_bitmap_V3_header_dict(binary_file.read(bitmap_info_size+14)))
+        elif bitmap_info_size == 108:
+            result_dict.update(get_bitmap_V4_header_dict(binary_file.read(bitmap_info_size + 14)))
+        elif bitmap_info_size == 124:
+            result_dict.update(get_bitmap_V4_header_dict(binary_file.read(bitmap_info_size + 14)))
         return result_dict
 
 def get_bitmap_V3_header_dict(bitmap_info):
@@ -38,7 +44,7 @@ def get_bitmap_V3_header_dict(bitmap_info):
         "number of panels" : int.from_bytes(bitmap_info[26:28], byteorder="little"),
         "color depth": int.from_bytes(bitmap_info[28:30], byteorder="little"),
         "compression method": int.from_bytes(bitmap_info[30:34], byteorder="little"),
-        "image size": int.from_bytes(bitmap_info[34:38], byteorder="little"),
+        "image size": convert_size(int.from_bytes(bitmap_info[34:38], byteorder="little")),
         "horizontal resolution": int.from_bytes(bitmap_info[38:42], byteorder="little", signed=True),
         "vertical resolution": int.from_bytes(bitmap_info[42:46], byteorder="little", signed=True),
         "number of colors": int.from_bytes(bitmap_info[46:50], byteorder="little"),
@@ -64,9 +70,7 @@ def get_bitmap_V4_header_dict(bitmap_info):
     return result_dict
 
 def get_bitmap_V5_header_dict(bitmap_info):
-    #todo (он редко встречается)
-    pass
-
+    return get_bitmap_V4_header_dict(bitmap_info)
 
 
 def convert_size(size_bytes):
@@ -83,6 +87,9 @@ def convert_size(size_bytes):
     return '%s %s' % (s, size_name[i])
 
 if __name__ == '__main__':
-    header_info = get_bitmap_file_header_dict("test images/Untitled.bmp")
+    filename = "test images/when-my-code-works-300x200.bmp"
+    header_info = get_bitmap_file_header_dict(filename)
     print(header_info)
-    print(get_bitmap_info_dict("test images/Untitled.bmp"))
+    print(get_bitmap_info_dict(filename))
+    print(get_all_metadata(filename))
+
