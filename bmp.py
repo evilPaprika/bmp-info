@@ -48,7 +48,7 @@ def get_bitmap_info_dict(filename):
             result_dict.update(get_bitmap_V4_header_dict(binary_file.read(bitmap_info_size + 14)))
         elif bitmap_info_size == 124:
             result_dict.update({"BMP version": "Windows V5"})
-            result_dict.update(get_bitmap_V4_header_dict(binary_file.read(bitmap_info_size + 14)))
+            result_dict.update(get_bitmap_V5_header_dict(binary_file.read(bitmap_info_size + 14)))
 
         return result_dict
 
@@ -58,24 +58,24 @@ def get_bitmap_V3_header_dict(bitmap_info):
         "height" : int.from_bytes(bitmap_info[22:26], byteorder="little"),
         "number of panels" : int.from_bytes(bitmap_info[26:28], byteorder="little"),
         "color depth": int.from_bytes(bitmap_info[28:30], byteorder="little"),
-        "compression method": int.from_bytes(bitmap_info[30:34], byteorder="little") or "None",
+        "compression method": int.from_bytes(bitmap_info[30:34], byteorder="little") or "none",
         "image size": convert_size(int.from_bytes(bitmap_info[34:38], byteorder="little")),
         "horizontal resolution": int.from_bytes(bitmap_info[38:42], byteorder="little", signed=True),
         "vertical resolution": int.from_bytes(bitmap_info[42:46], byteorder="little", signed=True),
-        "number of colors": int.from_bytes(bitmap_info[46:50], byteorder="little"),
-        "number of important colors": int.from_bytes(bitmap_info[50:54], byteorder="little")
+        "num colors": int.from_bytes(bitmap_info[46:50], byteorder="little") or "unindexed",
+        "num important colors": int.from_bytes(bitmap_info[50:54], byteorder="little")
     }
 
 def get_bitmap_V4_header_dict(bitmap_info):
     result_dict = get_bitmap_V3_header_dict(bitmap_info)
     result_dict.update({
-        "red mask": int.from_bytes(bitmap_info[54:58], byteorder="little"),
-        "green mask": int.from_bytes(bitmap_info[58:62], byteorder="little"),
-        "blue mask": int.from_bytes(bitmap_info[62:66], byteorder="little"),
-        "alpha mask": int.from_bytes(bitmap_info[66:70], byteorder="little"),
-        "cs type": int.from_bytes(bitmap_info[70:74], byteorder="little")
+        "red mask": "{0:#010x}".format((int.from_bytes(bitmap_info[54:58], byteorder="little"))),
+        "green mask": "{0:#010x}".format(int.from_bytes(bitmap_info[58:62], byteorder="little")),
+        "blue mask": "{0:#010x}".format(int.from_bytes(bitmap_info[62:66], byteorder="little")),
+        "alpha mask": "{0:#010x}".format(int.from_bytes(bitmap_info[66:70], byteorder="little")),
+        "color space type": int.from_bytes(bitmap_info[70:74], byteorder="little")
     })
-    if (result_dict["cs type"] == 0):
+    if (result_dict["color space type"] == 0):
         result_dict.update({
             "end points": int.from_bytes(bitmap_info[74:110], byteorder="little"),
             "gamma red": int.from_bytes(bitmap_info[110:114], byteorder="little"),
@@ -85,7 +85,14 @@ def get_bitmap_V4_header_dict(bitmap_info):
     return result_dict
 
 def get_bitmap_V5_header_dict(bitmap_info):
-    return get_bitmap_V4_header_dict(bitmap_info)
+    print('test')
+    result_dict = get_bitmap_V4_header_dict(bitmap_info)
+    result_dict.update({
+        "intent": int.from_bytes(bitmap_info[122:126], byteorder="little"),
+        "profile data": int.from_bytes(bitmap_info[126:130], byteorder="little"),
+        "profile size": int.from_bytes(bitmap_info[130:134], byteorder="little"),
+    })
+    return result_dict
 
 
 def convert_size(size_bytes):
