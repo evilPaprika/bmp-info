@@ -85,7 +85,6 @@ def get_bitmap_V4_header_dict(bitmap_info):
     return result_dict
 
 def get_bitmap_V5_header_dict(bitmap_info):
-    print('test')
     result_dict = get_bitmap_V4_header_dict(bitmap_info)
     result_dict.update({
         "intent": int.from_bytes(bitmap_info[122:126], byteorder="little"),
