@@ -3,8 +3,18 @@ import os
 import ntpath
 import time
 
+def get_headers(filename):
+    with open(filename, "rb") as binary_file:
+        bitmap_headers = binary_file.read(14)
+        if bitmap_headers[:2].decode("ascii") not in ['BM', 'BA', 'CI', 'CP', 'IC', 'PT']:
+            raise ValueError("file is not bitmap image file")
+        offset = int.from_bytes(bitmap_headers[10:12], byteorder="little")
+        bitmap_headers += binary_file.read(offset - 14)
+    return bitmap_headers
+
 
 def get_all_metadata(filename):
+    bitmap_headers = get_headers(filename)
     result = {
         "path" : os.path.dirname(os.path.realpath(filename)),
         "filename" : ntpath.basename(filename),
@@ -12,45 +22,37 @@ def get_all_metadata(filename):
         "modified": time.ctime(os.path.getmtime(filename))
 
     }
-    result.update(get_bitmap_file_header_dict(filename))
-    result.update(get_bitmap_info_dict(filename))
+    result.update(get_bitmap_file_header_dict(bitmap_headers))
+    result.update(get_bitmap_info_dict(bitmap_headers))
     return result
 
-def get_bitmap_file_header_dict(filename):
+def get_bitmap_file_header_dict(bitmap_headers):
     """
-    Обрабатывает хедер файла, и возвращает словарь данных
+     Обрабатывает хедер файла, и возвращает словарь данных
     """
-    with open(filename, "rb") as binary_file:
-        bitmap = binary_file.read(14)
-        if bitmap[:2].decode("ascii") not in ['BM', 'BA', 'CI', 'CP', 'IC', 'PT']:
-            raise ValueError("file is not bitmap image file")
-        return {
-                "header field" : bitmap[:2].decode("ascii"),
-                "file size" : convert_size(int.from_bytes(bitmap[2:6], byteorder="little")),
-                "offset": int.from_bytes(bitmap[10:12], byteorder="little"),
-               }
+    return {
+            "header field" : bitmap_headers[:2].decode("ascii"),
+            "file size" : convert_size(int.from_bytes(bitmap_headers[2:6], byteorder="little")),
+            "offset": int.from_bytes(bitmap_headers[10:12], byteorder="little"),
+           }
 
-def get_bitmap_info_dict(filename):
+def get_bitmap_info_dict(bitmap_headers):
     """
-    Находит размер заголовочной информации, вызывает соответствующий
-    обработчик, и возвращает словарь данных
+     Находит размер заголовочной информации, вызывает соответствующий
+     обработчик, и возвращает словарь данных
     """
-    with open(filename, "rb") as binary_file:
-        binary_file.seek(14)
-        bitmap_info_size = int.from_bytes(binary_file.read(2), byteorder="little")
-        binary_file.seek(0)
-        result_dict = { "bitmap info size": bitmap_info_size }
-        if bitmap_info_size == 40:
-            result_dict.update({"BMP version": "Windows V3"})
-            result_dict.update(get_bitmap_V3_header_dict(binary_file.read(bitmap_info_size+14)))
-        elif bitmap_info_size == 108:
-            result_dict.update({"BMP version": "Windows V4"})
-            result_dict.update(get_bitmap_V4_header_dict(binary_file.read(bitmap_info_size + 14)))
-        elif bitmap_info_size == 124:
-            result_dict.update({"BMP version": "Windows V5"})
-            result_dict.update(get_bitmap_V5_header_dict(binary_file.read(bitmap_info_size + 14)))
-
-        return result_dict
+    bitmap_info_size = int.from_bytes(bitmap_headers[14:16], byteorder="little")
+    result_dict = { "bitmap info size": bitmap_info_size }
+    if bitmap_info_size == 40:
+        result_dict.update({"BMP version": "Windows V3"})
+        result_dict.update(get_bitmap_V3_header_dict(bitmap_headers))
+    elif bitmap_info_size == 108:
+        result_dict.update({"BMP version": "Windows V4"})
+        result_dict.update(get_bitmap_V4_header_dict(bitmap_headers))
+    elif bitmap_info_size == 124:
+        result_dict.update({"BMP version": "Windows V5"})
+        result_dict.update(get_bitmap_V5_header_dict(bitmap_headers))
+    return result_dict
 
 def get_bitmap_V3_header_dict(bitmap_info):
     return {
@@ -73,7 +75,7 @@ def get_bitmap_V4_header_dict(bitmap_info):
         "green mask": "{0:#010x}".format(int.from_bytes(bitmap_info[58:62], byteorder="little")),
         "blue mask": "{0:#010x}".format(int.from_bytes(bitmap_info[62:66], byteorder="little")),
         "alpha mask": "{0:#010x}".format(int.from_bytes(bitmap_info[66:70], byteorder="little")),
-        "color space type": int.from_bytes(bitmap_info[70:74], byteorder="little")
+        "color space type": bitmap_info[70:74].decode('ascii')[::-1]
     })
     if (result_dict["color space type"] == 0):
         result_dict.update({
@@ -113,4 +115,5 @@ if __name__ == '__main__':
     print(header_info)
     print(get_bitmap_info_dict(filename))
     print(get_all_metadata(filename))
+    print(get_headers(filename))
 
