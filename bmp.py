@@ -111,9 +111,6 @@ def convert_size(size_bytes):
 
 if __name__ == '__main__':
     filename = "test-images/when-my-code-works-300x200.bmp"
-    header_info = get_bitmap_file_header_dict(filename)
-    print(header_info)
-    print(get_bitmap_info_dict(filename))
+    bitmap_headers = get_headers(filename)
     print(get_all_metadata(filename))
-    print(get_headers(filename))
-
+    print(bitmap_headers)
