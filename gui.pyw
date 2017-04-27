@@ -14,6 +14,7 @@ class Window(Frame):
         self.init_window()
 
     def init_window(self):
+        if hasattr(self, 'frame'): self.frame.destroy() # отчищает окно, если чтото уже есть
         self.frame = Frame(self.master)
         self.frame.pack(fill=BOTH, expand=1)
         self.master.title("BMP metadata viewer")
@@ -21,7 +22,7 @@ class Window(Frame):
         self.showButtons()
         vertical_offset = 0
         label_max_width = 0
-        for key, val in get_all_metadata(self.current_image).items():
+        for key, val in get_all_bmp_metadata(self.current_image).items():
             self.lbl = Label(self.frame, text=(key.ljust(22) + ":  " + str(val)), font=("Courier New", 12))
             self.lbl.place(x=self.img_width + 10, y=vertical_offset)
             self.master.update_idletasks()
@@ -49,12 +50,10 @@ class Window(Frame):
 
     def click_next(self):
         self.current_image = self.images_list[(self.images_list.index(self.current_image) - 1) % len(self.images_list)]
-        self.frame.destroy()
         self.init_window()
 
     def click_prev(self):
         self.current_image = self.images_list[(self.images_list.index(self.current_image) + 1) % len(self.images_list)]
-        self.frame.destroy()
         self.init_window()
 
 
@@ -62,7 +61,6 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         images_folder = sys.argv[1]
     else: images_folder = "test-images"
-    #else: print("usage: bmp.exe <image-name.bmp>")
     root = Tk()
     root.geometry("1000x800")
     app = Window(images_folder, root)
