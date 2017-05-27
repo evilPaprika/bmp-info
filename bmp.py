@@ -6,6 +6,9 @@ import sys
 
 
 def get_all_bmp_metadata(filename):
+    """
+    результат: словарь всех данных
+    """
     bitmap_headers = get_headers(filename)
     result = {
         "path" : os.path.dirname(os.path.realpath(filename)),
@@ -25,7 +28,7 @@ def get_headers(filename):
         bitmap_headers = binary_file.read(14)
         if bitmap_headers[:2].decode("ascii") not in ['BM', 'BA', 'CI', 'CP', 'IC', 'PT']:
             raise ValueError("file is not bitmap image file")
-        offset = int.from_bytes(bitmap_headers[10:12], byteorder="little")
+        offset = int.from_bytes(bitmap_headers[10:14], byteorder="little")
         bitmap_headers += binary_file.read(offset - 14)
     return bitmap_headers
 
@@ -110,6 +113,16 @@ def convert_size(size_bytes):
     p = math.pow(1024, i)
     s = round(size_bytes/p, 2)
     return '%s %s' % (s, size_name[i])
+
+
+def get_raw_bitmap(filename):
+    with open(filename, "rb") as binary_file:
+        bitmap_headers = binary_file.read(14)
+        if bitmap_headers[:2].decode("ascii") not in ['BM', 'BA', 'CI', 'CP', 'IC', 'PT']:
+            raise ValueError("file is not bitmap image file")
+        offset = int.from_bytes(bitmap_headers[10:12], byteorder="little")
+        binary_file.read(offset - 14)
+        return binary_file.read()
 
 
 if __name__ == '__main__':
